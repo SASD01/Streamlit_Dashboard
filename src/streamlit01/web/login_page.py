@@ -22,16 +22,33 @@ _CSS = """
 section[data-testid="stSidebar"],
 button[data-testid="stSidebarCollapsedControl"] { display: none; }
 
+div[data-testid="stMainBlockContainer"] {
+    padding-top: .5rem !important;
+    padding-bottom: .5rem !important;
+}
+
 .login-hero {
+    box-sizing: border-box;
     width: 100%;
+    min-height: calc(100vh - 5rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center !important;
-    padding: 5rem 1rem 2rem !important;
+    padding: 1rem !important;
+}
+
+.login-error {
+    color: #b42318;
+    margin: 0 auto 1rem !important;
 }
 
 .login-logo {
     display: block;
-    width: 240px;
-    margin: 0 auto 3.5rem auto !important;
+    width: min(220px, 28vw, 20vh);
+    height: auto;
+    margin: 0 auto 1.5rem !important;
 }
 
 .login-title {
@@ -44,7 +61,7 @@ button[data-testid="stSidebarCollapsedControl"] { display: none; }
     color: #555 !important;
     max-width: 620px;
     line-height: 1.6;
-    margin: 0 auto 4.5rem auto !important;
+    margin: 0 auto clamp(1.25rem, 4vh, 2.25rem) auto !important;
 }
 
 a.ms-button,
@@ -71,7 +88,23 @@ a.ms-button span {
 .login-footer {
     color: #9aa5b1 !important;
     font-size: .85rem !important;
-    margin-top: 6rem !important;
+    margin-top: clamp(1.5rem, 4vh, 2.5rem) !important;
+}
+
+@media (max-height: 600px) {
+    .login-hero {
+        min-height: calc(100vh - 4rem);
+        padding: .5rem !important;
+    }
+
+    .login-logo {
+        width: min(160px, 18vh);
+        margin-bottom: .75rem !important;
+    }
+
+    .login-title { font-size: 1.7rem !important; }
+    .login-subtitle { margin-bottom: 1rem !important; }
+    .login-footer { margin-top: 1rem !important; }
 }
 </style>
 """
@@ -86,11 +119,6 @@ def render_login_page(
     login_url: str,
     error_message: str | None = None,
 ) -> None:
-    if error_message:
-        st.error(error_message)
-
-    st.markdown(_CSS, unsafe_allow_html=True)
-
     logo_html = ""
 
     if LOGO_PATH.exists():
@@ -101,10 +129,18 @@ def render_login_page(
         )
 
     safe_url = escape(login_url, quote=True)
+    error_html = ""
+    if error_message:
+        error_html = (
+            '<div class="login-error" role="alert">'
+            f"{escape(error_message)}"
+            "</div>"
+        )
 
-    st.markdown(
-        f"""
+    st.html(
+        f"""{_CSS}
         <div class="login-hero">
+            {error_html}
             {logo_html}
             <div class="login-title">
                 Bienvenido al Dashboard de Logistic
@@ -123,6 +159,5 @@ def render_login_page(
                 © 2026 Logistic Services And Solutions S.A.S
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
