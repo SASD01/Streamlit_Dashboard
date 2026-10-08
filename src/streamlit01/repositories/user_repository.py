@@ -22,12 +22,8 @@ class UserRepository:
         return self._session.scalar(stmt)
 
     def create(
-        self,
-        *,
-        microsoft_object_id: str,
-        email: str,
-        full_name: str,
-        is_active: bool = True,
+        self, *, microsoft_object_id: str, email: str,
+        full_name: str, is_active: bool = True,
     ) -> User:
         user = User(
             microsoft_object_id=microsoft_object_id,
@@ -35,33 +31,33 @@ class UserRepository:
             full_name=full_name,
             is_active=is_active,
         )
-
         self._session.add(user)
         self._session.flush()
-
         return user
 
     def assign_role(
-        self,
-        user_id: uuid.UUID,
-        role_id: uuid.UUID,
+        self, user_id: uuid.UUID, role_id: uuid.UUID,
         assigned_by: uuid.UUID | None = None,
     ) -> None:
         stmt = select(user_roles.c.user_id).where(
             user_roles.c.user_id == user_id,
             user_roles.c.role_id == role_id,
         )
-
-        exists = self._session.execute(stmt).first() is not None
-
-        if not exists:
-            insert_stmt = user_roles.insert().values(
-                user_id=user_id,
-                role_id=role_id,
-                assigned_by=assigned_by,
+        if self._session.execute(stmt).first() is None:
+            self._session.execute(
+                user_roles.insert().values(
+                    user_id=user_id,
+                    role_id=role_id,
+                    assigned_by=assigned_by,
+                )
             )
 
-            self._session.execute(insert_stmt)
+    def remove_role(self, user_id: uuid.UUID, role_id: uuid.UUID) -> None:
+        stmt = user_roles.delete().where(
+            user_roles.c.user_id == user_id,
+            user_roles.c.role_id == role_id,
+        )
+        self._session.execute(stmt)
 
     def get_roles(self, user_id: uuid.UUID) -> list[Role]:
         stmt = (
@@ -70,8 +66,15 @@ class UserRepository:
             .where(user_roles.c.user_id == user_id)
             .order_by(Role.name)
         )
-
         return list(self._session.scalars(stmt).all())
+
+    def get_role_names(self, user_id: uuid.UUID) -> set[str]:
+        stmt = (
+            select(Role.name)
+            .join(user_roles, Role.id == user_roles.c.role_id)
+            .where(user_roles.c.user_id == user_id)
+        )
+        return set(self._session.scalars(stmt).all())
 
     def get_allowed_pages(self, user_id: uuid.UUID) -> list[Page]:
         stmt = (
@@ -87,5 +90,4 @@ class UserRepository:
             .order_by(Page.sort_order)
             .distinct()
         )
-
         return list(self._session.scalars(stmt).all())
