@@ -37,13 +37,5 @@ def set_authenticated_user(
 
 
 def clear_auth() -> None:
-    st.session_state.update(
-        {
-            "auth_state": None,
-            "user_id": None,
-            "user_email": None,
-            "user_name": None,
-            "allowed_pages": [],
-            "auth_error": None,
-        }
-    )
+    """Clear the complete Streamlit session when the user logs out."""
+    st.session_state.clear()

@@ -19,6 +19,8 @@ _MICROSOFT_SVG = (
 _CSS = """
 <style>
 #MainMenu, footer { visibility: hidden; }
+section[data-testid="stSidebar"],
+button[data-testid="stSidebarCollapsedControl"] { display: none; }
 
 .login-hero {
     width: 100%;
