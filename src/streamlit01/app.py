@@ -3,6 +3,7 @@ import streamlit as st
 from streamlit01.web.authenticator import handle_authentication
 from streamlit01.web.navigation import render_navigation
 from streamlit01.web.session_manager import (
+    get_cookie_controller,
     init_session_state,
     is_authenticated,
 )
@@ -14,9 +15,10 @@ st.set_page_config(
 )
 
 init_session_state()
-handle_authentication()
+cookies = get_cookie_controller()
+handle_authentication(cookies)
 
 if not is_authenticated():
     st.stop()
 
-render_navigation()
+render_navigation(cookies)

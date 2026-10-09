@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_cookies_controller import CookieController
 
 from streamlit01.web.session_manager import (
     clear_auth,
@@ -15,8 +16,8 @@ _PAGE_PATHS = {
 }
 
 
-def render_navigation() -> None:
-    _render_sidebar()
+def render_navigation(cookies: CookieController) -> None:
+    _render_sidebar(cookies)
 
     allowed_pages = get_allowed_pages()
     pages = _build_pages(allowed_pages)
@@ -55,11 +56,11 @@ def _build_pages(
     return pages
 
 
-def _render_sidebar() -> None:
+def _render_sidebar(cookies: CookieController) -> None:
     with st.sidebar:
         st.write(f"Usuario: {st.session_state.get('user_name')}")
 
         if st.button("Cerrar sesión"):
-            clear_auth()
+            clear_auth(cookies)
             st.query_params.clear()
             st.rerun()

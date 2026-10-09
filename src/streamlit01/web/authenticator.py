@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_cookies_controller import CookieController
 
 from streamlit01.auth import (
     MicrosoftAuthService,
@@ -6,19 +7,27 @@ from streamlit01.auth import (
     is_valid_oauth_state,
 )
 from streamlit01.db.session import get_session
+from streamlit01.repositories.user_repository import UserRepository
 from streamlit01.services import UserService
 from streamlit01.web.login_page import render_login_page
 from streamlit01.web.session_manager import (
+    AUTH_COOKIE_NAME,
+    get_user_id_from_auth_token,
     is_authenticated,
     set_authenticated_user,
 )
 
 
-def handle_authentication() -> None:
+def handle_authentication(cookies: CookieController) -> None:
     if is_authenticated():
         return
 
-    _process_oauth_callback()
+    _restore_authenticated_user(cookies)
+
+    if is_authenticated():
+        return
+
+    _process_oauth_callback(cookies)
 
     if is_authenticated():
         return
@@ -26,7 +35,37 @@ def handle_authentication() -> None:
     _render_login_page()
 
 
-def _process_oauth_callback() -> None:
+def _restore_authenticated_user(cookies: CookieController) -> None:
+    token = cookies.get(AUTH_COOKIE_NAME)
+    user_id = get_user_id_from_auth_token(token)
+
+    if user_id is None:
+        if token is not None:
+            cookies.remove(AUTH_COOKIE_NAME)
+        return
+
+    with get_session() as session:
+        user = UserRepository(session).get_by_id(user_id)
+        if user is None or not user.is_active:
+            cookies.remove(AUTH_COOKIE_NAME)
+            return
+
+        pages = UserService(session).get_allowed_pages(user_id)
+        allowed_pages = [
+            {"key": page.page_key, "title": page.display_name}
+            for page in pages
+        ]
+
+    set_authenticated_user(
+        user_id=str(user.id),
+        email=user.email,
+        name=user.full_name,
+        allowed_pages=allowed_pages,
+        cookies=cookies,
+    )
+
+
+def _process_oauth_callback(cookies: CookieController) -> None:
     code = st.query_params.get("code")
     state = st.query_params.get("state")
 
@@ -63,6 +102,7 @@ def _process_oauth_callback() -> None:
             email=principal.email,
             name=principal.display_name,
             allowed_pages=allowed_pages,
+            cookies=cookies,
         )
 
     except Exception as exc:
